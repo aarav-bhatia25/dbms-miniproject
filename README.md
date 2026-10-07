@@ -84,4 +84,27 @@ npm run test:ui
 
 Tests use separate temporary databases. They do not change the demo records.
 
-This is a localhost classroom demo. Moisture thresholds are illustrative, and allocations represent assigned water, not measured consumption. It has no user login or physical sensor integration. The daily budget becomes fixed once any water is allocated. Keeping these boundaries makes the project small enough to explain clearly.
+## Deploy: Render + Neon
+
+React and Express run together as one Render web service. Neon hosts PostgreSQL.
+
+1. Create a **Free** Neon project with PostgreSQL 17. Select Singapore if available, and copy its **direct** connection string (connection pooling off). Keep SSL enabled.
+2. In Render, choose **New → Blueprint** and connect this GitHub repository. The included `render.yaml` selects the **Free** web service plan.
+3. Set `DATABASE_URL` to the Neon connection string in Render's secret/environment field. Do not put it in source code or commit it to GitHub.
+4. Deploy. Startup creates the six tables and loads sample data only if the database is empty. The website and API share the resulting `onrender.com` URL.
+
+If creating the Render web service manually, use:
+
+| Setting       | Value                                           |
+| ------------- | ----------------------------------------------- |
+| Build command | `npm ci --include=dev && npm run build`         |
+| Start command | `npm run db:setup:hosted && npm start`          |
+| Health check  | `/api/health`                                   |
+| Environment   | `NODE_ENV=production`, `DATABASE_URL` from Neon |
+| Instance type | Free                                            |
+
+The hosted setup uses the database supplied by Neon; it does not require permission to create databases. Local setup continues to work as before. Cloud seed data starts fresh; local records are not uploaded.
+
+Render's free web service sleeps after 15 minutes without traffic, so open it before your presentation and allow time for it to wake up. See [Render's free-tier limits](https://render.com/docs/free) and [Neon's Free plan](https://neon.com/pricing).
+
+This is a shared classroom demo: visitors can edit the sample records. Moisture thresholds are illustrative, and allocations represent assigned water, not measured consumption. It has no user login or physical sensor integration. The daily budget becomes fixed once any water is allocated.

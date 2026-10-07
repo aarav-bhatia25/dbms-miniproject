@@ -24,13 +24,15 @@ export function createApp(pool) {
     const origin = req.get("origin");
     const allowed = [
       `http://${req.get("host")}`,
-      "http://127.0.0.1:5173",
-      "http://localhost:5173",
+      `https://${req.get("host")}`,
+      ...(process.env.NODE_ENV === "production"
+        ? []
+        : ["http://127.0.0.1:5173", "http://localhost:5173"]),
     ];
     if (req.method !== "GET" && origin && !allowed.includes(origin)) {
       return res
         .status(403)
-        .json({ error: "Use the local application to make changes." });
+        .json({ error: "Use this application's website to make changes." });
     }
     next();
   });
@@ -108,12 +110,10 @@ export function createApp(pool) {
       );
       if (assigned.rowCount && budget.total_litres !== input.total_litres) {
         await client.query("ROLLBACK");
-        return res
-          .status(409)
-          .json({
-            error:
-              "This budget has already been allocated. Choose a new date for another budget.",
-          });
+        return res.status(409).json({
+          error:
+            "This budget has already been allocated. Choose a new date for another budget.",
+        });
       }
       await client.query(
         "UPDATE daily_budgets SET total_litres = $1 WHERE budget_id = $2",
@@ -226,12 +226,10 @@ export function createApp(pool) {
     if (error.type === "entity.parse.failed")
       return res.status(400).json({ error: "Invalid JSON." });
     console.error(error.message);
-    res
-      .status(500)
-      .json({
-        error:
-          "Could not access the database. Check PostgreSQL and run npm run db:setup.",
-      });
+    res.status(500).json({
+      error:
+        "Could not access the database. Check PostgreSQL and run npm run db:setup.",
+    });
   });
   return app;
 }

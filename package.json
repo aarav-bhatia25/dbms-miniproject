@@ -13,6 +13,7 @@
     "start": "node server/index.js",
     "db:up": "node scripts/start-db.js",
     "db:setup": "node scripts/setup-db.js",
+    "db:setup:hosted": "node scripts/setup-db.js --existing",
     "test": "node --test --test-concurrency=1 tests/*.test.js",
     "test:ui": "playwright test"
   },

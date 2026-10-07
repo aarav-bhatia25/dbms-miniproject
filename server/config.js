@@ -1,5 +1,11 @@
 import "dotenv/config";
 
+if (process.env.NODE_ENV === "production" && !process.env.DATABASE_URL) {
+  throw new Error(
+    "Set DATABASE_URL in the hosting environment before starting the app.",
+  );
+}
+
 // A separate database leaves the previous version's data untouched.
 export const databaseUrl =
   process.env.DATABASE_URL ||

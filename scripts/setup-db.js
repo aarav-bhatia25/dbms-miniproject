@@ -35,23 +35,26 @@ export async function installDatabase(url, seed = true) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
-    const target = new URL(databaseUrl);
-    const database = decodeURIComponent(target.pathname.slice(1));
-    const connection = new URL(databaseUrl);
-    connection.pathname = "/postgres";
-    const admin = new pg.Client({ connectionString: connection.toString() });
-    await admin.connect();
-    try {
-      const exists = await admin.query(
-        "SELECT 1 FROM pg_database WHERE datname = $1",
-        [database],
-      );
-      if (!exists.rowCount)
-        await admin.query(
-          `CREATE DATABASE "${database.replaceAll('"', '""')}"`,
+    // Hosted providers create the database for us; only install our tables there.
+    if (!process.argv.includes("--existing")) {
+      const target = new URL(databaseUrl);
+      const database = decodeURIComponent(target.pathname.slice(1));
+      const connection = new URL(databaseUrl);
+      connection.pathname = "/postgres";
+      const admin = new pg.Client({ connectionString: connection.toString() });
+      await admin.connect();
+      try {
+        const exists = await admin.query(
+          "SELECT 1 FROM pg_database WHERE datname = $1",
+          [database],
         );
-    } finally {
-      await admin.end();
+        if (!exists.rowCount)
+          await admin.query(
+            `CREATE DATABASE "${database.replaceAll('"', '""')}"`,
+          );
+      } finally {
+        await admin.end();
+      }
     }
     await installDatabase(databaseUrl);
     console.log("Database ready: six tables and sample irrigation requests.");

@@ -1,6 +1,8 @@
 import { before, beforeEach, after, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import pg from "pg";
 import { databaseUrl } from "../server/config.js";
 import { createApp, poolOptions } from "../server/app.js";
@@ -163,4 +165,44 @@ test("API supports records and reports, and fixes the budget after allocation", 
   assert.equal(data.budget.remaining_litres, 0);
   assert.equal(data.reports.days[0].allocated_litres, 120000);
   assert.equal(data.reports.farmers.length, 5);
+});
+
+test("HTTPS form submissions work while unrelated origins are rejected", async () => {
+  const post = (origin) =>
+    fetch(`${base}/farmers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: origin },
+      body: JSON.stringify({ name: "Hosted Farmer", village: "Walwa" }),
+    });
+  assert.equal(
+    (await post(base.replace("http:", "https:").replace("/api", ""))).status,
+    201,
+  );
+  assert.equal((await post("https://unrelated.example")).status, 403);
+});
+
+test("hosted database setup can rerun without resetting saved allocations", async () => {
+  await allocate();
+  const url = new URL(databaseUrl);
+  url.pathname = `/${database}`;
+  await promisify(execFile)(
+    process.execPath,
+    ["scripts/setup-db.js", "--existing"],
+    {
+      env: {
+        ...process.env,
+        DATABASE_URL: url.toString(),
+        NODE_ENV: "production",
+      },
+    },
+  );
+  assert.equal(
+    (await pool.query("SELECT SUM(allocated_litres) AS total FROM allocations"))
+      .rows[0].total,
+    100000,
+  );
+  assert.equal(
+    (await pool.query("SELECT COUNT(*) AS total FROM farmers")).rows[0].total,
+    4,
+  );
 });
